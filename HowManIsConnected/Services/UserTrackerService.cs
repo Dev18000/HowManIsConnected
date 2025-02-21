@@ -1,65 +1,60 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using HowManIsConnected.Models;
 
 namespace HowManIsConnected.Services
 {
     /// <summary>
-    /// Tracks the number of connected users in a Blazor Server application.
+    /// Tracks authenticated users in the Blazor Server application.
     /// </summary>
     public class UserTrackerService
     {
-        // Stores connected users by Circuit ID
-        private static readonly ConcurrentDictionary<string, bool> _connectedCircuits = new();
+        private static readonly ConcurrentDictionary<string, UserInfo> _connectedUsers = new();
+        public event Action<List<UserInfo>>? OnUserListChanged; // Notify UI when user list changes
 
         /// <summary>
-        /// Event triggered when the user count changes.
+        /// Adds a new user to the tracking list.
         /// </summary>
-        public event Action<int>? OnUserCountChanged;
-
-        /// <summary>
-        /// Adds a user when a new circuit (connection) is opened.
-        /// </summary>
-        public Task AddUser(string circuitId)
+        public Task AddUser(string circuitId, string email, string name)
         {
-            _connectedCircuits.TryAdd(circuitId, true);
+            var userInfo = new UserInfo
+            {
+                CircuitId = circuitId,
+                Email = email,
+                Name = name
+            };
+
+            _connectedUsers[circuitId] = userInfo;
             NotifyClients();
             return Task.CompletedTask;
         }
 
         /// <summary>
-        /// Removes a user when a circuit (connection) is closed.
+        /// Removes a user when their circuit is closed.
         /// </summary>
         public Task RemoveUser(string circuitId)
         {
-            if (_connectedCircuits.ContainsKey(circuitId))
-            {
-                Console.WriteLine($"🔴 [UserTrackerService] Removing user: {circuitId}");
-                _connectedCircuits.TryRemove(circuitId, out _);
-                NotifyClients();
-            }
-            else
-            {
-                Console.WriteLine($"⚠️ [UserTrackerService] Circuit {circuitId} already removed!");
-            }
-
+            _connectedUsers.TryRemove(circuitId, out _);
+            NotifyClients();
             return Task.CompletedTask;
         }
 
         /// <summary>
-        /// Gets the current number of connected users.
+        /// Gets the current list of connected users.
         /// </summary>
-        public int GetUserCount()
+        public List<UserInfo> GetConnectedUsers()
         {
-            return _connectedCircuits.Count;
+            return _connectedUsers.Values.ToList();
         }
 
-        /// <summary>
-        /// Notifies all subscribed clients about the updated user count.
-        /// </summary>
         private void NotifyClients()
         {
-            int count = _connectedCircuits.Count;
-            Console.WriteLine($"🔄 [UserTrackerService] Updated user count: {count}");
-            OnUserCountChanged?.Invoke(count);
+            var users = GetConnectedUsers();
+            Console.WriteLine($"🔄 [UserTrackerService] Online users: {users.Count}");
+            OnUserListChanged?.Invoke(users);
         }
     }
 }

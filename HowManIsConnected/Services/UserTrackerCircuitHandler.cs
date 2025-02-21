@@ -3,7 +3,7 @@
 namespace HowManIsConnected.Services
 {
     /// <summary>
-    /// Tracks user connections using Blazor Server Circuits.
+    /// Tracks user circuits and passes authentication info.
     /// </summary>
     public class UserTrackerCircuitHandler : CircuitHandler
     {
@@ -14,22 +14,20 @@ namespace HowManIsConnected.Services
             _userTracker = userTracker;
         }
 
-        /// <summary>
-        /// Called when a new user connects to the Blazor Server application.
-        /// </summary>
-        public override Task OnCircuitOpenedAsync(Circuit circuit, CancellationToken cancellationToken)
+        public override async Task OnCircuitOpenedAsync(Circuit circuit, CancellationToken cancellationToken)
         {
             Console.WriteLine($"✅ [Blazor] Circuit opened: {circuit.Id}");
-            return _userTracker.AddUser(circuit.Id);
+
+            // Here you should get user info from authentication
+            string email = "guest@example.com"; // Replace with actual authentication logic
+            string name = "Guest User"; // Replace with actual authentication logic
+
+            await _userTracker.AddUser(circuit.Id, email, name);
         }
 
-        /// <summary>
-        /// Called when a user disconnects from the Blazor Server application.
-        /// </summary>
         public override async Task OnCircuitClosedAsync(Circuit circuit, CancellationToken cancellationToken)
         {
             Console.WriteLine($"❌ [Blazor] Circuit closed: {circuit.Id}");
-            await Task.Delay(500);
             await _userTracker.RemoveUser(circuit.Id);
         }
     }

@@ -1,36 +1,54 @@
 ﻿@using HowManIsConnected.Services
+@using HowManIsConnected.Models
 
-@inject UserTrackerService CircuitHandler
+@inject UserTrackerService UserTracker
 
-<h3>Online Users: @OnlineUsersCount</h3>
+<h3>Online Users: @OnlineUsers.Count</h3>
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Connected At</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var user in OnlineUsers)
+        {
+            <tr>
+                <td>@user.Name</td>
+                <td>@user.Email</td>
+                <td>@user.ConnectedAt.ToLocalTime()</td>
+            </tr>
+        }
+    </tbody>
+</table>
 
 @code {
-    private int OnlineUsersCount = 0;
+    private List<UserInfo> OnlineUsers = new();
 
     protected override void OnInitialized()
     {
-        // Subscribe to user count updates
-        CircuitHandler.OnUserCountChanged += UpdateUserCount;
-
-        // Get the current number of connected users
-        OnlineUsersCount = CircuitHandler.GetUserCount();
+        // Subscribe to user list updates
+        UserTracker.OnUserListChanged += UpdateUserList;
+        OnlineUsers = UserTracker.GetConnectedUsers();
     }
 
-    private void UpdateUserCount(int count)
+    private void UpdateUserList(List<UserInfo> users)
     {
-        Console.WriteLine($"🖥 [Blazor UI] UI Update: {count} users online");
+        Console.WriteLine($"🖥 [Blazor UI] Updating user list: {users.Count} users");
 
-        // Ensure UI updates happen on the correct thread
         InvokeAsync(() =>
         {
-            OnlineUsersCount = count;
+            OnlineUsers = users;
             StateHasChanged();
         });
     }
 
     public void Dispose()
     {
-        // Unsubscribe when the component is destroyed
-        CircuitHandler.OnUserCountChanged -= UpdateUserCount;
+        // Unsubscribe when component is destroyed
+        UserTracker.OnUserListChanged -= UpdateUserList;
     }
 }
