@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Security.Claims;
 using HowManIsConnected.Models;
 using Microsoft.AspNetCore.Components.Authorization;
 
@@ -58,15 +59,18 @@ namespace HowManIsConnected.Services
         {
             Console.WriteLine($"🔄 [UserTrackerService] Handling Auth State Change...");
 
-            using var scope = _serviceProvider.CreateScope();
-            var authStateProvider = scope.ServiceProvider.GetRequiredService<AuthenticationStateProvider>();
-            var authState = await authStateProvider.GetAuthenticationStateAsync();
-            var user = authState.User;
-
-            foreach (var entry in _connectedUsers)
+            foreach (var (circuitId, user) in _connectedUsers)
             {
-                entry.Value.Email = user.FindFirst(c => c.Type == System.Security.Claims.ClaimTypes.Email)?.Value ?? "guest@example.com";
-                entry.Value.Name = user.Identity?.Name ?? "Guest User";
+                using var scope = _serviceProvider.CreateScope();
+                var authStateProvider = scope.ServiceProvider.GetRequiredService<AuthenticationStateProvider>();
+                var authState = await authStateProvider.GetAuthenticationStateAsync();
+                var newUser = authState.User;
+
+                if (newUser.Identity is { IsAuthenticated: true })
+                {
+                    user.Name = newUser.Identity?.Name ?? "Guest User";
+                    user.Email = newUser.FindFirst(c => c.Type == ClaimTypes.Email)?.Value ?? "guest@example.com";
+                }
             }
 
             NotifyClients();
@@ -75,8 +79,8 @@ namespace HowManIsConnected.Services
         private void NotifyClients()
         {
             var users = GetConnectedUsers();
-            Console.WriteLine($"🔄 [UserTrackerService] Updating UI: {users.Count} users");
-            OnUserListChanged?.Invoke(users);
+            Console.WriteLine($"🔄 [UserTrackerService] Notifying Blazor: {users.Count} users");
+            OnUserListChanged?.Invoke(new List<UserInfo>(users));
         }
     }
 }

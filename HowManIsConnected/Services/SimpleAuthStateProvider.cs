@@ -24,19 +24,17 @@ namespace HowManIsConnected.Services
             Console.WriteLine($"✅ [SimpleAuthStateProvider] Logging in: {name} ({email})");
 
             var identity = new ClaimsIdentity(new[]
-            {
-                new Claim(ClaimTypes.Name, name),
-                new Claim(ClaimTypes.Email, email)
-            }, "BlazorAuth");
+                {
+                    new Claim(ClaimTypes.Name, name),
+                    new Claim(ClaimTypes.Email, email)
+                }, "BlazorAuth");
 
             _user = new ClaimsPrincipal(identity);
             NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(_user)));
 
             Console.WriteLine($"🔄 [SimpleAuthStateProvider] State changed. Notifying Blazor.");
 
-            using var scope = _serviceProvider.CreateScope();
-            var userTracker = scope.ServiceProvider.GetRequiredService<UserTrackerService>();
-            userTracker.HandleAuthStateChanged().Wait(); 
+            Task.Delay(100).Wait();
         }
 
         public void Logout()
