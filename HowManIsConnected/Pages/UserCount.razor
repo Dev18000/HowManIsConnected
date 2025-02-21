@@ -1,5 +1,36 @@
-﻿<h3>UserCount</h3>
+﻿@using HowManIsConnected.Services
+
+@inject UserTrackerService CircuitHandler
+
+<h3>Online Users: @OnlineUsersCount</h3>
 
 @code {
+    private int OnlineUsersCount = 0;
 
+    protected override void OnInitialized()
+    {
+        // Subscribe to user count updates
+        CircuitHandler.OnUserCountChanged += UpdateUserCount;
+
+        // Get the current number of connected users
+        OnlineUsersCount = CircuitHandler.GetUserCount();
+    }
+
+    private void UpdateUserCount(int count)
+    {
+        Console.WriteLine($"🖥 [Blazor UI] UI Update: {count} users online");
+
+        // Ensure UI updates happen on the correct thread
+        InvokeAsync(() =>
+        {
+            OnlineUsersCount = count;
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose()
+    {
+        // Unsubscribe when the component is destroyed
+        CircuitHandler.OnUserCountChanged -= UpdateUserCount;
+    }
 }
