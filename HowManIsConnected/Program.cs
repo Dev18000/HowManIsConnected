@@ -5,7 +5,14 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
 builder.Services.AddRazorPages();
-builder.Services.AddServerSideBlazor();
+builder.Services.AddServerSideBlazor()
+    .AddHubOptions(options =>
+    {
+        options.EnableDetailedErrors = true;
+        options.ClientTimeoutInterval = TimeSpan.FromSeconds(10); 
+        options.HandshakeTimeout = TimeSpan.FromSeconds(5); 
+    });
+
 builder.Services.AddSingleton<UserTrackerService>();
 builder.Services.AddSingleton<UserTrackerCircuitHandler>();
 builder.Services.AddSingleton<CircuitHandler>(sp => sp.GetRequiredService<UserTrackerCircuitHandler>());

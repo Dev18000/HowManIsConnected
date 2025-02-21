@@ -30,8 +30,17 @@ namespace HowManIsConnected.Services
         /// </summary>
         public Task RemoveUser(string circuitId)
         {
-            _connectedCircuits.TryRemove(circuitId, out _);
-            NotifyClients();
+            if (_connectedCircuits.ContainsKey(circuitId))
+            {
+                Console.WriteLine($"🔴 [UserTrackerService] Removing user: {circuitId}");
+                _connectedCircuits.TryRemove(circuitId, out _);
+                NotifyClients();
+            }
+            else
+            {
+                Console.WriteLine($"⚠️ [UserTrackerService] Circuit {circuitId} already removed!");
+            }
+
             return Task.CompletedTask;
         }
 

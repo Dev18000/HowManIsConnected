@@ -26,10 +26,11 @@ namespace HowManIsConnected.Services
         /// <summary>
         /// Called when a user disconnects from the Blazor Server application.
         /// </summary>
-        public override Task OnCircuitClosedAsync(Circuit circuit, CancellationToken cancellationToken)
+        public override async Task OnCircuitClosedAsync(Circuit circuit, CancellationToken cancellationToken)
         {
             Console.WriteLine($"❌ [Blazor] Circuit closed: {circuit.Id}");
-            return _userTracker.RemoveUser(circuit.Id);
+            await Task.Delay(500);
+            await _userTracker.RemoveUser(circuit.Id);
         }
     }
 }
