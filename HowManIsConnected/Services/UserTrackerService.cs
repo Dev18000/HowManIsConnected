@@ -1,25 +1,36 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Collections.Concurrent;
 using HowManIsConnected.Models;
+using Microsoft.AspNetCore.Components.Authorization;
 
 namespace HowManIsConnected.Services
 {
-    /// <summary>
-    /// Tracks authenticated users in the Blazor Server application.
-    /// </summary>
     public class UserTrackerService
     {
         private static readonly ConcurrentDictionary<string, UserInfo> _connectedUsers = new();
-        public event Action<List<UserInfo>>? OnUserListChanged; // Notify UI when user list changes
+        public event Action<List<UserInfo>>? OnUserListChanged;
+        private readonly IServiceProvider _serviceProvider;
 
-        /// <summary>
-        /// Adds a new user to the tracking list.
-        /// </summary>
-        public Task AddUser(string circuitId, string email, string name)
+        public UserTrackerService(IServiceProvider serviceProvider)
         {
+            _serviceProvider = serviceProvider;
+        }
+
+        public async Task AddUser(string circuitId, string email, string name)
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var authStateProvider = scope.ServiceProvider.GetRequiredService<AuthenticationStateProvider>();
+            var authState = await authStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                email = user.FindFirst(c => c.Type == System.Security.Claims.ClaimTypes.Email)?.Value ?? "guest@example.com";
+            }
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                name = user.Identity?.Name ?? "Guest User";
+            }
+
             var userInfo = new UserInfo
             {
                 CircuitId = circuitId,
@@ -29,12 +40,8 @@ namespace HowManIsConnected.Services
 
             _connectedUsers[circuitId] = userInfo;
             NotifyClients();
-            return Task.CompletedTask;
         }
 
-        /// <summary>
-        /// Removes a user when their circuit is closed.
-        /// </summary>
         public Task RemoveUser(string circuitId)
         {
             _connectedUsers.TryRemove(circuitId, out _);
@@ -42,18 +49,33 @@ namespace HowManIsConnected.Services
             return Task.CompletedTask;
         }
 
-        /// <summary>
-        /// Gets the current list of connected users.
-        /// </summary>
         public List<UserInfo> GetConnectedUsers()
         {
             return _connectedUsers.Values.ToList();
         }
 
+        public async Task HandleAuthStateChanged()
+        {
+            Console.WriteLine($"🔄 [UserTrackerService] Handling Auth State Change...");
+
+            using var scope = _serviceProvider.CreateScope();
+            var authStateProvider = scope.ServiceProvider.GetRequiredService<AuthenticationStateProvider>();
+            var authState = await authStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            foreach (var entry in _connectedUsers)
+            {
+                entry.Value.Email = user.FindFirst(c => c.Type == System.Security.Claims.ClaimTypes.Email)?.Value ?? "guest@example.com";
+                entry.Value.Name = user.Identity?.Name ?? "Guest User";
+            }
+
+            NotifyClients();
+        }
+
         private void NotifyClients()
         {
             var users = GetConnectedUsers();
-            Console.WriteLine($"🔄 [UserTrackerService] Online users: {users.Count}");
+            Console.WriteLine($"🔄 [UserTrackerService] Updating UI: {users.Count} users");
             OnUserListChanged?.Invoke(users);
         }
     }

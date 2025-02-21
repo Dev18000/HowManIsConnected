@@ -1,5 +1,9 @@
 ﻿@using HowManIsConnected.Pages
+@using HowManIsConnected.Services
 @inherits LayoutComponentBase
+@inject SimpleAuthStateProvider AuthProvider
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>HowManIsConnected</PageTitle>
 
@@ -12,6 +16,15 @@
         <div class="top-row px-4">
             <a href="https://docs.microsoft.com/aspnet/" target="_blank">About</a>
             <UserCount />
+
+            @if (IsAuthenticated)
+            {
+                <button @onclick="Logout">Logout (@UserName)</button>
+            }
+            else
+            {
+                <button @onclick="Login">Login</button>
+            }
         </div>
 
         <article class="content px-4">
@@ -19,3 +32,36 @@
         </article>
     </main>
 </div>
+
+@code {
+    private bool IsAuthenticated = false;
+    private string UserName = "Guest";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await UpdateUserState();
+        AuthStateProvider.AuthenticationStateChanged += async (task) => await UpdateUserState();
+    }
+
+    private async Task UpdateUserState()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        IsAuthenticated = user.Identity?.IsAuthenticated == true;
+        UserName = user.Identity?.Name ?? "Guest";
+
+        StateHasChanged();
+    }
+
+    private void Logout()
+    {
+        AuthProvider.Logout();
+        Navigation.NavigateTo("/login");
+    }
+
+    private void Login()
+    {
+        Navigation.NavigateTo("/login");
+    }
+}

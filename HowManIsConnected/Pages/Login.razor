@@ -1,0 +1,39 @@
+﻿@page "/login"
+@using HowManIsConnected.Services
+@inject NavigationManager Navigation
+@inject SimpleAuthStateProvider AuthProvider
+
+<h3>Login</h3>
+
+@if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <p style="color: red">@ErrorMessage</p>
+}
+
+<div>
+    <label>Email:</label>
+    <input @bind="Email" />
+</div>
+<div>
+    <label>Name:</label>
+    <input @bind="Name" />
+</div>
+<button @onclick="LoginClick">Login</button>
+
+@code {
+    private string Email = "";
+    private string Name = "";
+    private string ErrorMessage = "";
+
+    private void LoginClick()
+    {
+        if (string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(Name))
+        {
+            ErrorMessage = "Email and Name are required!";
+            return;
+        }
+
+        AuthProvider.Login(Email, Name);
+        Navigation.NavigateTo("/");
+    }
+}

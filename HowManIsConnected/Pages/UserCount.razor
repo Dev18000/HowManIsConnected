@@ -1,7 +1,7 @@
 ﻿@using HowManIsConnected.Services
 @using HowManIsConnected.Models
-
 @inject UserTrackerService UserTracker
+@inject AuthenticationStateProvider AuthStateProvider
 
 <h3>Online Users: @OnlineUsers.Count</h3>
 
@@ -28,11 +28,18 @@
 @code {
     private List<UserInfo> OnlineUsers = new();
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        // Subscribe to user list updates
         UserTracker.OnUserListChanged += UpdateUserList;
         OnlineUsers = UserTracker.GetConnectedUsers();
+
+        AuthStateProvider.AuthenticationStateChanged += async (task) =>
+        {
+            var authState = await task;
+            Console.WriteLine($"🔄 [UserCount] AuthState changed: {authState.User.Identity?.Name}");
+            await Task.Delay(100);
+            StateHasChanged();
+        };
     }
 
     private void UpdateUserList(List<UserInfo> users)
@@ -48,7 +55,6 @@
 
     public void Dispose()
     {
-        // Unsubscribe when component is destroyed
         UserTracker.OnUserListChanged -= UpdateUserList;
     }
 }

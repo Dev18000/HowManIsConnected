@@ -1,21 +1,30 @@
 using HowManIsConnected.Services;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.Circuits;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container
 builder.Services.AddRazorPages();
-builder.Services.AddServerSideBlazor()
-    .AddHubOptions(options =>
+builder.Services.AddServerSideBlazor();
+
+builder.Services.AddHttpContextAccessor();
+
+builder.Services.AddAuthentication("BlazorAuth")
+    .AddCookie("BlazorAuth", options =>
     {
-        options.EnableDetailedErrors = true;
-        options.ClientTimeoutInterval = TimeSpan.FromSeconds(10); 
-        options.HandshakeTimeout = TimeSpan.FromSeconds(5); 
+        options.LoginPath = "/login";
     });
 
-builder.Services.AddSingleton<UserTrackerService>();
-builder.Services.AddSingleton<UserTrackerCircuitHandler>();
-builder.Services.AddSingleton<CircuitHandler>(sp => sp.GetRequiredService<UserTrackerCircuitHandler>());
+builder.Services.AddAuthorizationCore();
+
+builder.Services.AddScoped<SimpleAuthStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider, SimpleAuthStateProvider>();
+
+builder.Services.AddScoped<UserTrackerService>(); 
+
+
+builder.Services.AddScoped<UserTrackerCircuitHandler>();
+builder.Services.AddScoped<CircuitHandler>(sp => sp.GetRequiredService<UserTrackerCircuitHandler>());
 
 var app = builder.Build();
 
@@ -29,7 +38,10 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 
-// Setup Blazor Server
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllers();
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
 
